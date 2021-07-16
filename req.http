@@ -1,0 +1,10 @@
+post http://localhost:8080/post
+# Content-Type: application/json
+
+# {
+#     "postId": "777",
+#     "userId": "1234567",
+#     "postPath": "infwec/bvcewg",
+#     "timestamp": "1263572134",
+#     "likeCount": "0"
+# }
