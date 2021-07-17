@@ -6,6 +6,7 @@ const mongoose = require('mongoose')
 const app = express()
 const bodyParser = require('body-parser')
 const { Room } = require('./models/Room.js')
+const { User } = require('./models/User.js')
 app.use(bodyParser.urlencoded({
     extended: true
   }));
@@ -37,47 +38,95 @@ app.post('/startRoom', (req, res) => {
 })
 
 io.on('connect', socket => {
-  socket.on('join', async ({room, email}, callback) => {
-  
+  socket.on('join', async ({room, email, name}, callback) => {
+
     var roomPool = await Room.find({room})
     if (roomPool) {
-      var prevRoom = roomPool
-      if (prevRoom.dummy.length!==0) {
-          
+        
+      const userAlreadyJoined = User.find({name, email})
+      var uid = "IDK"
+      if (typeof(userAlreadyJoined)!="undefined" && typeof(userAlreadyJoined.room)!="undefined")
+      {
+        socket.emit('servermessage', { text: `YOU ARE ALREADY PART OF A GAME`});
+        uid = "DONT"
+      }  
+      if (typeof(userAlreadyJoined)!="undefined")
+        uid = userAlreadyJoined._id       
+      if (uid!="DONT") {
+        var prevRoom = roomPool
+        if (uid=="IDK") {
+          //  ADD LOGIN ETC
+          if (prevRoom.game==1) {
+            uid="DONT"    // RANDOM PERSON TRYING TO JOIN GAME AFTER IT'S STARTED
+          }
+          else{
+            var newUser = new User({name, email})
+            newUser = await User.save(newUser)
+            uid = newUser._id
+          }
+        }
+        if ( prevRoom.game==1 || prevRoom.dummy.length!==0 ) {
         console.log('Guys joining the room')
+        if ( prevRoom.game==1 ) {
+          // Retrieve user's data and let him/ her join the room
+        }  
           prevRoom.dummy.push({email})
           if (prevRoom.dummy.length == 21) {
               console.log('All users have joined the game')
               // RANDOM ALLOTMENT FOR NOW
               for ( var i=1; i<prevRoom.dummy.length; i++) {
                   if (i%2==1) {
-                    prevRoom.team1.push(prevRoom.dummy[i].email)
+                    prevRoom.team1.push(prevRoom.dummy[i])
                   } else {
-                    prevRoom.team2.push(prevRoom.dummy[i].email)
+                    prevRoom.team2.push(prevRoom.dummy[i])
                   }
               }
-            dummy.clear()
+            prevRoom.dummy.clear()
+            prevRoom.game = 1
             } else {
             console.log(`${21-prevRoom.dummy.length} more users needed`) 
           }
         Room.findByIdAndUpdate(roomPool._id, prevRoom, {new: true})
         if (prevRoom.dummy.length==0) {
-        socket.broadcast.to(room).emit('servermessage', { text: `START` });
+        socket.broadcast.to(room).emit('gamemessage', { text: `START` });
         }
         else {
         socket.emit('servermessage', { text: `WAIT`});
         }
       }
+      await User.findByIdAndUpdate(uid,{name, email, room, tempId: socket.id}, { new: true })
+      }
     } else {
       socket.emit('servermessage', { text: `INVALID ROOM ID`});
     }
   })
+
   socket.on('disconnect', async () => {
     // NEEDS WORK
-    
-    if(user) {
-      io.to(user.room).emit('message', { user: 'Admin', text: `${user.name} left.` });
-      io.to(user.room).emit('roomData', { room: user.room, users: getUsersInRoom(user.room)});
+    var userLeaving = await User.find({tempId: socket.id})
+    if ( userLeaving && userLeaving.room) {
+
+      var room = await Room.find({name: userLeaving.room})
+      if (room)
+      {
+        delete userLeaving.room
+        var idxOfLeave;
+        idxOfLeave = room.dummy.indexOf(userLeaving.email)
+        if (idxOfLeave!=-1) {
+        // User leaves before game starts        
+          room.dummy.splice(idxOfLeave, 1)
+        } else {
+          idxOfLeave = room.team1.indexOf(userLeaving.email)
+          if (idxOfLeave!=-1) {
+            room.team1.splice(idxOfLeave, 1)
+          } else {
+            idxOfLeave = room.team2.indexOf(userLeaving.email)
+            room.team2.splice(idxOfLeave, 1)
+          }
+        }
+        User.findByIdAndUpdate(userLeaving._id, userLeaving, { new: true })
+        Room.findByIdAndUpdate(room._id, room, { new: true })
+      }
     }
   })
 })
