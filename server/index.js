@@ -20,6 +20,7 @@ let io = require('socket.io')(server, {
     origin: '*',
   }
 })
+app.use(cors())
 app.set('io', io)
 const router = express.Router()
 
@@ -83,6 +84,7 @@ io.on('connect', socket => {
       r.rounds--;
       var player = Math.floor(Math.random()*10)
       var user = User.find({tempId: r.teams[1][player].tempId}).tempId
+      
       io.sockets.in(user).emit('servergamemessage', r.words[word.length-1])
       Room.findByIdAndUpdate(room._id, room, { new: true })
     } else {
@@ -144,9 +146,17 @@ io.on('connect', socket => {
         console.log('Guys joining the room')
         if ( prevRoom.game==1 ) {
           // Retrieve user's data and let him/ her join the room
-          
+          var y = -1
+          for ( var i=0; i<prevRoom.dummy.length; i++ ) {
+            if ( prevRoom.dummy[i].id==uid) {
+              y = i;  break;
+            }
+          }
+        if (y!=-1) {
+          prevRoom.dummy.splice(y, 1)
+        }
         }  
-          prevRoom.dummy.push({email})
+          prevRoom.dummy.push({email, id: uid})
           if (prevRoom.dummy.length == 21) {
               console.log('All users have joined the game')
               // RANDOM ALLOTMENT FOR NOW
@@ -181,7 +191,7 @@ io.on('connect', socket => {
       var room = await Room.find({name: userLeaving.room})
       if (room)
       {
-        delete userLeaving.room
+        delete userLeaving.tempId
         var idxOfLeave;
         idxOfLeave = room.dummy.indexOf(userLeaving.email)
         if (idxOfLeave!=-1) {
@@ -191,14 +201,30 @@ io.on('connect', socket => {
           idxOfLeave = room.teams[0].indexOf(userLeaving.email)
           if (idxOfLeave!=-1) {
             room.teams[0].splice(idxOfLeave, 1)
+            room.dummy.push([userLeaving._id, 0])
           } else {
             idxOfLeave = room.team2.indexOf(userLeaving.email)
             room.teams[1].splice(idxOfLeave, 1)
+            room.dummy.push([userLeaving._id, 1])
           }
         }
-        User.findByIdAndUpdate(userLeaving._id, userLeaving, { new: true })
+        if (room.teams[0].length==0&&room.teams[1].length==0) {
+          // GAME HAS ENDED
+          for ( var i=0; i<2; i++ ) {
+            for ( var j=0; j<10; j++ ) {
+              var u = User.find({_id: room.teams[i][j].id})
+              u.score += room.score[i]
+              User.findByIdAndUpdate(room.teams[i][j], u, {new: true})
+            }
+          }
+          Room.findByIdAndRemove(room)
+        }
+        else
+        {
+          User.findByIdAndUpdate(userLeaving._id, userLeaving, { new: true })
         Room.findByIdAndUpdate(room._id, room, { new: true })
       }
+    }
     }
   })
 })
