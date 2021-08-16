@@ -3,14 +3,16 @@ const Schema = mongoose.Schema
 const roomSchema = Schema({
     name: { type: String, required:  true },
     teams: { type: [String] },
-    moderator: {type: String, required: true},
-    current: {type: [Number], default: [0, 0]},
+    current: {type: [Number], default: [0, 3]},
+    player: {type: String},
+    mails: { type: [[String]], default: [[], []] }, 
     game: { type: Number, default: 0 },
-    dummy: { type: [String] },
-    admin: {type: String},
+    turn: { type: Number, default: 0 },
+    dummy: { type: [[String]], default: [[], []] },
     score: {type: [Number], default: [0, 0]},
     rounds: { type: Number, default: 4},
-    words: {type: [String]}
+    st: { type: String },
+    word: {type: String}
 })
 const Room = mongoose.model('room', roomSchema)
 module.exports = Room
