@@ -21,7 +21,6 @@ let io = require('socket.io')(server, {
 })
 app.use(cors())
 app.set('io', io)
-const router = express.Router()
 
 
 const PORT = 5000 || process.env.PORT
@@ -128,14 +127,14 @@ io.on('connect', () => {
             if (j!==-1) {
                 // I found this player
                 room.dummy[i].splice(j ,1);
-                end = len(room.dummy[i]==0) && len(room.dummy[1-i]==0);
+                end = room.dummy[i].length==0 && room.dummy[1-i].length==0;
             } 
            }
            if (!end)
               Room.findByIdAndUpdate(room._id, room);
            else {
                for ( var i=0; i<2; i++ ) {
-                   for ( var j=0; j<len(room.mails[i]); j++ ) {
+                   for ( var j=0; j<room.mails[i].length; j++ ) {
                        var usr = User.find({ email: room.mails[i][j] });
                        if (usr) {
                            usr.score += room.score[i];
@@ -164,11 +163,11 @@ io.on('connect', () => {
             if (reply.userSentence!==undefined){ 
             room.st = userSentence;
             Room.findByIdAndUpdate(room._id, room);
-            socket.emit('gamemessage', {user: `server`, sentence: room.st} );
+            socket.emit('game', {user: `server`, sentence: room.st} );
             } else {
                 var word = reply.guess;
                 var gen = false;
-                for ( var i=0; i<len(words[i]); i++ ) {
+                for ( var i=0; i<words[i].length; i++ ) {
                     if (words[i].indexOf(word)!==-1) {
                         //  check if word is having similar emos
                         if (room.current[0]!==i) {
@@ -176,7 +175,7 @@ io.on('connect', () => {
                             // check if 1st team is responding
                             if (room.turn == room.rounds%2) {
                                 room.turn = 1 - room.turn;
-                                var j = Math.floor(Math.random()*len(room.dummy[turn]));
+                                var j = Math.floor(Math.random()*room.dummy[turn].length);
                                 room.player = room.dummy[room.turn][j];
                                 Room.findByIdAndUpdate(room._id, room);
                                 io.to(room.player).emit('game', { user: `server`, text: emoMatrix[quality[0]][quality[1]] });
@@ -202,9 +201,9 @@ io.on('connect', () => {
                                 // Team found the right row only
                                 if (room.rounds%2==room.turn) {
                                     room.turn = 1 - room.turn;
-                                var j = Math.floor(Math.random()*len(room.dummy[turn]));
-                                var row = Math.floor(Math.random()*len(emoMatrix));
-                                var col = Math.floor(Math.random()*len(emoMatrix[row]));
+                                var j = Math.floor(Math.random()*room.dummy[turn].length);
+                                var row = Math.floor(Math.random()*emoMatrix.length);
+                                var col = Math.floor(Math.random()*emoMatrix[row].length);
                                 room.current[0] = row; room.current[1] = col;
                                 room.player = room.dummy[room.turn][j];
                                 Room.findByIdAndUpdate(room._id, room);
@@ -226,9 +225,9 @@ io.on('connect', () => {
                     
                     // Generating New Emotion
 
-                    var j = Math.floor(Math.random()*len(room.dummy[turn]));
-                    var row = Math.floor(Math.random()*len(emoMatrix));
-                    var col = Math.floor(Math.random()*len(emoMatrix[row]));
+                    var j = Math.floor(Math.random()*room.dummy[turn].length);
+                    var row = Math.floor(Math.random()*emoMatrix.length);
+                    var col = Math.floor(Math.random()*emoMatrix[row].length);
                     room.current[0] = row; room.current[1] = col;
                     room.player = room.dummy[room.turn][j];
                     Room.findByIdAndUpdate(room._id, room);
