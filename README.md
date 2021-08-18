@@ -1,36 +1,34 @@
 # emo-g
-# Node-js: socket-io | express
-# Mongo DB
+# Node-js | socket-io | MongoDB
 
 SCHEMAS :   Room    User
 
-*gamemessages* are sent for any game related communication
-*servermessages* are sent for room entry/ exit communication
+*game* event for any game related communication
+*servermessages* event for room entry/ exit communication
 
-#Room
-name     ROOM NAME <br />
-teams -  TEAM NAMES <br />
-current - LAST WORD IN THE ROOM <br />
-player -  CURRENT PLAYER THAT GIVES STATEMENTS <br />
-mails - EMAIL IDS OF PLAYERS <br />
-game - IF GAME IS ON  <br />
-turn - CURRENT TEAM PLAYING  <br />
-dummy - SOCKET ID STORAGE  <br />
-score - SCORES OF THE TWO TEAMS  <br />
-rounds - ROUNDS LEFT  <br />
-st - STATEMENT ISSUED ( removable )  <br />
-word - WORD ISSUED ( removed )  <br />
-
-
-#User
-email - EMAIL-ID OF USER  <br />
-score - USERS SCORE TILL DATE  <br />
-tempId - STORES SOCKET ID OF USER FOR THE GAME  <br />
-room - STORES USER'S ROOM FOR THE GAME  <br />
+Room
+>  name <br />
+  teams <br />
+  current *last word*<br /> 
+  player *Last player to give statement* <br />
+  mails <br />
+  game <br />
+  turn <br />
+  dummy *store socket ids of users*<br />
+  score *store score of player*<br />
+  rounds <br />
+  st *Needed for data retrieval if statement player looses connectivity*  <br />
+  word *Data retrieval* <br />
 
 
-Why this design ? <br />
+User
+>  email <br />
+  score  <br />
+  tempId *Removed when user looses connectivity* <br />
+  room *Removed when user looses connectivity*<br />
+  
 
-We want to keep in mind that user may loose internet connectivity. <br />
-To ensure a break-less gaming experience we store all nessecary info to ensure game runs smoothly even in absence of a user who could possibly be an integral part of the game
+When user leaves game, we remove the socket id from Room of the user from database. <br />
+Data Retrieval on user rejoining done through dummy array that stores the socket id.
+
 
